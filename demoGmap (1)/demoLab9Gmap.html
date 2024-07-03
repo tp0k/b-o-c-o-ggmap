@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="row mt-4">
+            <div class="col-4">
+                <h4> GOOGLE MAPS API </h4>
+            </div>
+            <div class="col-4">
+                <div class="form-group">
+                    <select class="form-control" id="sel1" onchange="searchMap(this.value)">
+                        <option value="">--- Chọn địa điểm ---</option>
+                        <option value="cafe">Quán cafe</option>
+                        <option value="food">Quán ăn</option>
+                        <option value="hospital">Bệnh viện</option>
+                        <option value="bank">Ngân hàng</option>
+                        <option value="atm">Cây ATM</option>
+                        <option value="bar">bar</option>
+                        <option value="book_store">book_store</option>
+                        <option value="university">university</option>
+                        <option value="gym">gym</option>
+                        <option value="library">Thư viện</option>
+                        <option value="bus_station">Trạm xe buýt</option>
+                        <option value="museum">Bảo tàng</option>
+                        <option value="park">Công viên</option>
+                        <option value="parking">Chỗ đỗ xe</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-4">
+                <div>
+                    <b style="font-size: 20px;">Vị trí hiện tại:</b> <span id="currentPosition"></span>
+                    <a href="https://vectorified.com/font-awesome-map-icon" title="Font Awesome Map Icon"><img src="https://vectorified.com/images/font-awesome-map-icon-21.png" width="30px" /></a>
+                </div>
+            </div>
+
+        </div>
+        <div class="row">
+            <div id="map" style="width:100%; height:88%; position:absolute; bottom:0; left:0px; background-color:#666;"></div>
+        </div>
+    </div>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD371jIGMBc35rcK9em4EjcRbAtDdkjzrs&libraries=places&callback=showMap">
+    //Nhúng API map thực
+    </script>
+    <script>
+    var lati = 0;
+    var longi = 0;
+    var bando;
+
+    function searchMap(loaidiadiem) {
+    if (!loaidiadiem || loaidiadiem == '')
+    return;
+    var request = {
+    location: { //Trung tâm vùng tìm kiếm
+    lat: lati,
+    lng: longi
+    }, //Toạ độ bắt đầu tìm kiếm
+    radius: '1000', // ~ Bán kính tìm kiếm
+    type: loaidiadiem   // Loại địa điểm tìm kiếm
+    };
+    var service = new google.maps.places.PlacesService(bando);
+    service.nearbySearch(request, showPlaces); //khi có dữ liệu tìm kiếm trả về thì gọi đến function showPlaces
+    }
+    var arrMarkers = []
+    var infowindow;
+
+    function showPlaces(result, status) {
+    if (status == google.maps.places.PlacesServiceStatus.OK && result && result.length > 0) {
+    //Khi có danh sách địa điểm mới -> xoá điểm cũ đi
+    for (i in arrMarkers)
+    arrMarkers[i].setMap(null);
+    arrMarkers = [];
+    //Tạo các marker (điểm) đánh dấu các vị trí tìm được
+    for (i in result) {
+    var place = result[i];
+    var image = {
+    url: place.icon,
+    size: new google.maps.Size(71, 71),
+    origin: new google.maps.Point(0, 0),
+    anchor: new google.maps.Point(17, 34),
+    scaledSize: new google.maps.Size(25, 25)
+    };
+    console.log(place);
+    var marker = new google.maps.Marker({
+    map: bando,
+    icon: image,
+    title: place.name,
+    content: "<strong>" + place.name + "</strong><br />" + place.vicinity,
+    position: place.geometry.location,
+    data: place
+    });
+    google.maps.event.addListener(marker, 'click', function() {
+    infowindow.setContent(this.content)
+    infowindow.open(bando, this);
+    TimDuong(this.data);
+    });
+    arrMarkers.push(marker);
+    }
+    }
+    }
+    var ddisplay
+
+    function TimDuong(place) {
+    var dservice = new google.maps.DirectionsService();
+    if (ddisplay)
+    ddisplay.setMap(null);
+    ddisplay = new google.maps.DirectionsRenderer();
+    ddisplay.setMap(bando);
+    var request = {
+    origin: {
+    lat: lati,
+    lng: longi
+    },
+    destination: place.geometry.location, //Vị trí địa điểm cần đến
+    travelMode: 'WALKING', //Phương tiên: đi bộ
+    provideRouteAlternatives: true
+    };
+    dservice.route(request, function(result, status) { //Khởi tạo đường đi với các thông tin vừa tao ở trên
+    if (status == "OK") ddisplay.setDirections(result);
+    });
+    }
+
+    function showMap() {
+    infowindow = new google.maps.InfoWindow();
+    window.navigator.geolocation.getCurrentPosition(function(pos) {
+    lati = parseFloat(pos.coords.latitude);
+    longi = parseFloat(pos.coords.longitude);
+    $('#currentPosition').text(lati + ',' + longi);
+    bando = new google.maps.Map(document.getElementById('map'), {
+    center: {
+    lat: lati,
+    lng: longi
+    }, //Lấy tâm bản đồ tại toạ độ hiện tại
+    zoom: 15
+    });
+    var diemtrungtam = new google.maps.Marker({
+    position: {
+    lat: lati,
+    lng: longi
+    },
+    map: bando
+    }); // Tạo 1 điểm chấm trên bản đồ
+    });
+
+    }
+    </script>
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+</body>
+
+</html>
